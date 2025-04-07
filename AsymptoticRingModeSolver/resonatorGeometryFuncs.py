@@ -9,12 +9,11 @@ class Clothoid3:
         self.curveFraction = clothoidPars["curveFraction"]                          # Fraction of the resonator length comprized of curved section (remaining length correspond to straight sections between the curves)
         self.couplingLengthFraction = clothoidPars["couplingLengthFraction"]        # Fractional length of one triangle side coupled to the input/output waveguide
         
-        #self.couplingLength = self.resonatorLength / 3
         self.curvatureRef = 0                                                       # Reference curvature when calculating mode properties in the structure
         
     @property
     def a_val(self):
-        """ Single bend clothoid a parameter """
+        """ Single bend clothoid A parameter """
         return ((math.pi / 3)**(1/(self.clothoidOrder + 1))) / (self.curveFraction * self.resonatorLength / 2)
     
     def IsCoupled(self, z):
@@ -78,12 +77,8 @@ class Ring:
         """ Class describing a ring resonator of constant radius """
         self.resonatorLength = ringPars["resonatorLength"]                      # Length of the resonator (m)
         self.couplingLengthFraction = ringPars["couplingLengthFraction"]        # Length of the coupling region relative to the length of the ring
-        #self.theta_min = ringPars["theta_min"]                                  # Angle corresponding to the starting point of the coupling region relative to the the point of nearest separtion to the waveguide
-        #self.theta_max = ringPars["theta_max"]                                  # Angle corresponding to the ending point of the coupling region relative to the the point of nearest separtion to the waveguide
         
-        #self.ringRadius = self.resonatorLength / (2*math.pi)
         self.curvatureRef = self.Curvature(0)                                   # Reference curvature when calculating mode properties in the structure
-        #self.couplingLength = (self.theta_max - self.theta_min) * self.ringRadius
         
     @property
     def ringRadius(self):

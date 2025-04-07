@@ -22,34 +22,35 @@ class Resonance:
         
         self.omegaJ = (2 * math.pi * C_CONST) / self.lambda0                                                                # Central frequency value (2pi Hz)
         self.omega_vec = np.linspace(self.omegaJ - self.omegaRange/2, self.omegaJ + self.omegaRange/2, self.Nf)             # Vector of frequency values (2pi Hz)
-        #self.lambda_vec = (2 * math.pi * C_CONST) / self.omega_vec
         
         self.InitializeFields()
-        #self.SetReferenceValues()
-        #self.GenerateResonanceMesh()
-        #if (self.generateAsyFields == True): self.GenerateAsymptoticFieldDistributions()
-        #if (self.generateSinglePassFields == True): self.GenerateSinglePassRingAmplitudes()
         
     @property
     def lambda_vec(self):
+        """ Vector of wavelength values for the resonance (in m) """
         return (2 * math.pi * C_CONST) / self.omega_vec
     
     def InitializeFields(self, hideProgress=False):
+        """ 
+        Computes the mode properties at the central resonance frequency, then solves for the asymptotic and single pass field amplitudes 
+        
+        Input:
+            - hideProgress : If true, hides the progress bar displayed during the computation.
+        """
         self.SetReferenceValues()
         self.GenerateResonanceMesh()
         if (self.generateAsyFields == True): self.GenerateAsymptoticFieldDistributions(hideProgress=hideProgress)
         if (self.generateSinglePassFields == True): self.GenerateSinglePassRingAmplitudes(hideProgress=hideProgress)
         
     def ResetWaveguideWidth(self, newWidth):
-        self.systemPars.waveguideWidth = newWidth
-        #self.systemPars.GenerateFittedParameters()
-        #self.systemPars.GenerateResonatorMesh()
+        """ 
+        Resets the waveguide with within the systemPars class, then recomputes the derived values
         
+        Input:
+            - newWidth : New values of the waveguide/resonator cross-sectional width (in um)
+        """
+        self.systemPars.waveguideWidth = newWidth
         self.InitializeFields(hideProgress=True)
-        #self.SetReferenceValues()
-        #self.GenerateResonanceMesh()
-        #if (self.generateAsyFields == True): self.GenerateAsymptoticFieldDistributions(hideProgress=True)
-        #if (self.generateSinglePassFields == True): self.GenerateSinglePassRingAmplitudes(hideProgress=True)
         
     def SetReferenceValues(self):
         """ Set the mode properties at the central frequency value of the resonance """
@@ -78,7 +79,17 @@ class Resonance:
                 self.lossMesh[modeIndex, meshIndex] = self.systemPars.Attenuation_dB(modeIndex, self.lambda0, self.systemPars.curvatureMesh[meshIndex])
     
     def PropagateFieldAmplitude(self, delOmega, noHOMcoupling=False, noWaveguideCoupling=False):
-        """ Perform the field propagation along the full length of the coupled waveguide and resonator system """
+        """ 
+        Perform the field propagation along the full length of the coupled waveguide and resonator system 
+        
+        Input:
+            - delOmega : Detuning of the field frequency from the resonance center (2pi Hz)
+            - noHOMcoupling : If True, turns off the methods which implement the higher order mode coupling in the resonator
+            - noWaveguideCoupling : If True, turns off the methods which implement the coupling between the input/output waveguide and the resonator
+            
+        Output:
+            - propagationMats (nx, ny, nz) : Net transfer matrix for an input in mode (nz) and output in mode (ny) at the position index (nx). Ordering of the mode indices are [TE00 waveguide, TE01 waveguide, TE00 resonator, TE01 resonator]
+        """
         Ni = self.systemPars.Ni; Nr = self.systemPars.numRails; Nm = self.systemPars.meshSize
         
         vg_00 = C_CONST / self.ng_wg[0]; vg_10 = C_CONST / self.ng_wg[1]
@@ -129,7 +140,12 @@ class Resonance:
         return propagationMats
     
     def GenerateAsymptoticFieldDistributions(self, hideProgress=False):
-        """ Generate the full asymptotic field distirubutions corresponding to the coupled resonator and waveguide """
+        """ 
+        Generate the full asymptotic field distirubutions corresponding to the coupled resonator and waveguide 
+        
+        Input:
+            - (Optional) hideProgress : If True, hides the progress bar shown when performing the calculation.
+        """
         Ni = self.systemPars.Ni; Nr = self.systemPars.numRails; Nf = self.Nf; Nm = self.systemPars.meshSize; Lr = self.systemPars.resonator.resonatorLength
         
         self.fieldDist_asyIn = np.zeros((Ni, Ni, Nr, Nf, Nm), dtype=np.complex128)
@@ -162,7 +178,12 @@ class Resonance:
                             self.fieldDist_asyIn[inMode, outMode, railIndex, omegaIndex, stepIndex] = tempFieldAmp[railIndex*Ni + outMode]
                             
     def GenerateSinglePassRingAmplitudes(self, hideProgress=False):
-        """ Generate the field amplitudes for a single pass of the resonator """
+        """ 
+        Generate the field amplitudes for a single pass of the resonator 
+        
+        Input:
+            - (Optional) hideProgress : If True, hides the progress bar shown when performing the calculation.
+        """
         Ni = self.systemPars.Ni; Nr = self.systemPars.numRails; Nf = self.Nf; Nm = self.systemPars.meshSize; Lr = self.systemPars.resonator.resonatorLength
         
         self.singlePassFields = np.zeros((Ni, Ni, Nf, Nm), dtype=complex)
@@ -175,7 +196,17 @@ class Resonance:
                     self.singlePassFields[inMode, outMode, omegaIndex, :] = propagationsMatrices_temp[:, Ni + outMode, Ni + inMode]
                     
     def GetSinglePassField(self, freqIndex, posIndexShift=0, maxSteps=-1):
-        """ Comopute that field transfer matrices for a single pass of the resonator (including the rapidly varying phase) """
+        """ 
+        Comopute that field transfer matrices for a single pass of the resonator (including the rapidly varying phase) 
+        
+        Input:
+            - freqIndex : Index of the desired frequency bin.
+            - posIndexShift : Shifts the starting point of the evolution by (posIndexShift) steps along the position mesh of the resonator
+            - maxSteps : truncates the output to include only (maxSteps) number of propagation steps.
+            
+        Output:
+            - fieldAmp (nx, ny, nz) : Net transfer matrix for an input in mode (nx) and output in mode (ny) at the position index (nz) in the resonator. Ordering of the mode indices are [TE00 resonator, TE01 resonator]
+        """
         if (maxSteps < 0): maxSteps = self.systemPars.meshSize
         
         fieldAmp = self.singlePassFields[:, :, freqIndex, :]
@@ -197,7 +228,16 @@ class Resonance:
             
                     
     def TransmissionSpectrum(self, inMode, outMode):
-        """ Return the transmission spectrum for the asymptotic field with a given input mode (inMode) into a given output mode (outMode) """
+        """ 
+        Return the transmission spectrum for the asymptotic field with a given input mode (inMode) into a given output mode (outMode) 
+        
+        Input:
+            - inMode : Spatial mode input (0 = TE00, 1 = TE01)
+            - outMode : Spatial mode output (0 = TE00, 1 = TE01)
+            
+        Output:
+            - Magnitude squared of the output field spectrum at each frequency point.
+        """
         return np.absolute(self.fieldDist_asyIn[inMode, outMode, 0, :, -1])**2
     
     def PlotTransmissionSpectrum(self):
@@ -215,12 +255,28 @@ class Resonance:
 
         plt.show()
         
-    def RingField(self, modeIndex1, modeIndex2, omegaIndex):
-        """ Return the ring field for the given input mode (modeindex1) into a given output mode (modeIndex2) """
-        return self.fieldDist_asyIn[modeIndex1, modeIndex2, 1, omegaIndex, :]
+    def RingField(self, inMode, outMode, omegaIndex):
+        """ 
+        Return the ring field for the given input mode (inMode) into a given output mode (outMode) 
+        
+        Input:
+            - inMode : Spatial mode input (0 = TE00, 1 = TE01)
+            - outMode : Spatial mode output (0 = TE00, 1 = TE01)
+            - omegaIndex : Frequency bin of the reosonance
+            
+        Output:
+            - Field amplitude of the asymptotic mode in the resonator
+        """
+        return self.fieldDist_asyIn[inMode, outMode, 1, omegaIndex, :]
     
     def RingFieldAnimation(self, outfileName, interval=100):
-        """ Construct an animation of the ring field amplitudes for each input type """
+        """ 
+        Construct an animation of the ring field amplitudes for each input type 
+        
+        Input:
+            - outfileName : Name of the file the animation is to be saved in
+            - (Optional) interval : Time between frames.
+        """
         fig, ax_amp = plt.subplots(4, 1, constrained_layout=True)
         fig.set_size_inches(10, 10)
         fig.suptitle(f"Resonant Lambda = {self.lambda0 * 1e9 : .3f} nm, \t Delta Omega = {(self.omega_vec[0] - self.omegaJ) / 1e9 : .3f} Hz")

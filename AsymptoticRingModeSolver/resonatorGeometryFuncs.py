@@ -14,7 +14,7 @@ class Clothoid2:
     @property
     def a_val(self):
         """ Single bend clothoid A parameter """
-        return ((math.pi / 2)**(1/(self.clothoidOrder + 1))) / (self.curveFraction * self.resonatorLength / 2)
+        return ((math.pi / 2)**(1/(self.clothoidOrder + 1))) / (self.curveFraction * self.resonatorLength / 4)
     
     def IsCoupled(self, z):
         """ Returns True is the given z point is found within the ring/waveguide coupling region """
@@ -83,7 +83,7 @@ class Clothoid3:
     @property
     def a_val(self):
         """ Single bend clothoid A parameter """
-        return ((math.pi / 3)**(1/(self.clothoidOrder + 1))) / (self.curveFraction * self.resonatorLength / 2)
+        return ((math.pi / 3)**(1/(self.clothoidOrder + 1))) / (self.curveFraction * self.resonatorLength / 6)
     
     def IsCoupled(self, z):
         """ Returns True is the given z point is found within the ring/waveguide coupling region """
@@ -139,6 +139,76 @@ class Clothoid3:
             
         return y
         
+        
+class ClothoidN:
+    def __init__(self, clothoidPars):
+        """ Class describing a N-bend clothoid resonator """
+        self.resonatorLength = clothoidPars["resonatorLength"]                      # Length of the resonator (m)
+        self.N_bend = clothoidPars["N_bend"]                                        # Number of bends in the clothoid structure
+        self.clothoidOrder = clothoidPars["bendOrder"]                              # Order of the clothoid bend
+        self.curveFraction = clothoidPars["curveFraction"]                          # Fraction of the resonator length comprized of curved section (remaining length correspond to straight sections between the curves)
+        self.couplingLengthFraction = clothoidPars["couplingLengthFraction"]        # Fractional length of one resonator side coupled to the input/output waveguide
+        
+        self.curvatureRef = 0                                                       # Reference curvature when calculating mode properties in the structure
+        
+    @property
+    def a_val(self):
+        """ Single bend clothoid A parameter """
+        return ((math.pi / self.N_bend)**(1/(self.clothoidOrder + 1))) / (self.curveFraction * self.resonatorLength / (2 * self.N_bend))
+    
+    def IsCoupled(self, z):
+        """ Returns True is the given z point is found within the ring/waveguide coupling region """
+        if (z < (self.resonatorLength * (1 - self.couplingLengthFraction) / (2*self.N_bend)) or z > (self.resonatorLength * (1 + self.couplingLengthFraction) / (2*self.N_bend))):
+            """ Point is not in the coupling region """
+            return False
+        
+        """ Point is within the coupling region """
+        return True
+        
+    def GetRelativeZ(self, z):
+        """ Return the position of the z point relative to the zero curvature point of the nearest clothoid spiral """
+        z_ref = z % (self.resonatorLength / self.N_bend)
+        
+        if (z_ref <= self.curveFraction*self.resonatorLength/(2*self.N_bend)):
+            """ z point is in an 'out curve' """
+            return self.curveFraction*self.resonatorLength/(2*self.N_bend) - z_ref
+        elif (z_ref > (1 - self.curveFraction/2)*self.resonatorLength/self.N_bend):
+            """ z point is in an 'in curve' """
+            return z_ref - (1 - self.curveFraction/2)*self.resonatorLength/self.N_bend
+        
+        """ z point is in a straight section """
+        return 0
+    
+    def Curvature(self, z):
+        """ Instantaneous curvature at the provided z point """
+        z_ref = self.GetRelativeZ(z)
+        
+        return (self.clothoidOrder + 1) * self.a_val * ((self.a_val * z_ref)**self.clothoidOrder)
+        
+    def CurveDeriv(self, z):
+        """ Value of the curvature spatial derivative at the provided z point """
+        z_temp = z % (self.resonatorLength / self.N_bend)
+        z_ref = self.GetRelativeZ(z)
+        if (z_ref == 0 and self.curveFraction < 1): return 0
+        
+        derivMagnitude = self.clothoidOrder * (self.clothoidOrder + 1) * (self.a_val**2) * ((self.a_val * z_ref)**(self.clothoidOrder-1))
+        
+        # Add a minus sign if the point corresponds to an 'out bend'
+        curveDeriv = -derivMagnitude if (z_temp < self.curveFraction*self.resonatorLength/(2*self.N_bend)) else derivMagnitude
+        
+        return curveDeriv
+    
+    def Separation(self, z):
+        """ Get the hight of the clothoid spiral relative to the tangent at the zero curvature point """
+        z_ref = self.GetRelativeZ(z)
+        l_0 = self.a_val * z_ref
+        
+        y = 0
+        expansionOrder = 4      # Maximum order in the Taylor series expansion for the curve height
+        for index in range(expansionOrder): 
+            y += (1 / self.a_val) * ((-1)**index) * ((l_0)**((2*index+1)*(self.clothoidOrder+1)+1)) / (((2*index+1)*(self.clothoidOrder+1)+1) * math.factorial(2*index+1))
+            
+        return y
     
 
 class Ring:

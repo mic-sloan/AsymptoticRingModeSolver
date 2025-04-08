@@ -283,12 +283,12 @@ class SystemParameters:
         fig, ax = plt.subplots(2, 1, constrained_layout=True)
         positionAxis = (self.meshPositions[1:] + self.meshPositions[:self.meshSize]) / (2 * self.resonator.resonatorLength)
         
-        ax[0].plot(positionAxis, self.curvatureMesh)
+        ax[0].plot(positionAxis, self.curvatureMesh * (1e-6))
         ax[0].set_title("Resonator Curvature")
         ax[0].set_ylabel("Curvature (um^-1)")
         ax[0].set_xlabel("Relative Resonator Position")
         
-        ax[1].plot(positionAxis, self.curveDerivMesh)
+        ax[1].plot(positionAxis, self.curveDerivMesh * (1e-6)**2)
         ax[1].set_title("Curvature Derivative")
         ax[1].set_ylabel("Curvature Derivative (um^-2)")
         ax[1].set_xlabel("Relative Resonator Position")

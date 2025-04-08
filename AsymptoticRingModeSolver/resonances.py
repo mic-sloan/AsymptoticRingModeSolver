@@ -7,7 +7,7 @@ from tqdm import tqdm
 from AsymptoticRingModeSolver.systemParameters import SystemParameters
 from scipy.linalg import expm
 
-C_CONST = 2.998e8                 # Speed of light in vacuum (m/s)
+C_CONST = 3e8                 # Speed of light in vacuum (m/s)
 hbar = 1.054e-34            # Reduced Plank's constant (Js)
 
 class Resonance:
@@ -76,7 +76,7 @@ class Resonance:
             for modeIndex in range(self.systemPars.Ni):
                 self.neffMesh[modeIndex, meshIndex] = self.systemPars.Neff(modeIndex, self.lambda0, self.systemPars.curvatureMesh[meshIndex])
                 self.ngMesh[modeIndex, meshIndex] = self.systemPars.Ng(modeIndex, self.lambda0, self.systemPars.curvatureMesh[meshIndex])
-                self.lossMesh[modeIndex, meshIndex] = self.systemPars.Attenuation_dB(modeIndex, self.lambda0, self.systemPars.curvatureMesh[meshIndex])
+                self.lossMesh[modeIndex, meshIndex] = 100 * (self.systemPars.Attenuation_dB(modeIndex, self.lambda0, self.systemPars.curvatureMesh[meshIndex]) / 20) * math.log(10)
     
     def PropagateFieldAmplitude(self, delOmega, noHOMcoupling=False, noWaveguideCoupling=False):
         """ 

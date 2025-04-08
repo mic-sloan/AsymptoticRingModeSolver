@@ -1,4 +1,4 @@
-from .resonatorGeometryFuncs import Clothoid3, Ring
+from .resonatorGeometryFuncs import Clothoid2, Clothoid3, Ring
 from .systemParameters import SystemParameters
 from .resonances import Resonance
 from .modeParameterSolver import (
